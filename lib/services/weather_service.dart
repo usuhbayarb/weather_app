@@ -1,91 +1,89 @@
-
 import 'package:dio/dio.dart';
 import '../models/weather_model.dart';
 
 class WeatherService {
   static const String _baseUrl = 'https://api.weatherapi.com/v1';
-
-  // API key-г build үед --dart-define ашиглан сольж болно:
-  // flutter run --dart-define=WEATHER_API_KEY=your_key
-  static const String _apiKey = String.fromEnvironment(
-    'WEATHER_API_KEY',
-    defaultValue: 'cb288425569c4c8db0164139261106',
-  );
+  static const String _apiKey = 'cb288425569c4c8db0164139261106';
 
   final Dio _dio;
 
   WeatherService({Dio? dio})
       : _dio = dio ??
-      Dio(
-        BaseOptions(
-          baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-          sendTimeout: const Duration(seconds: 15),
-        ),
-      );
+            Dio(
+              BaseOptions(
+                baseUrl: _baseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 15),
+                sendTimeout: const Duration(seconds: 15),
+              ),
+            );
 
   Future<WeatherData> getWeather(String query) async {
     try {
-      final response = await _dio.get('/forecast.json', queryParameters: {
-        'key': _apiKey,
-        'q': query,
-        'days': 7,
-        'aqi': 'no',
-        'alerts': 'no',
-        'lang': 'mn',
-      });
-
-      final data = response.data;
-      return WeatherData.fromJson(
-        data['current'],
-        data['location'],
-        data['forecast']['forecastday'],
+      final response = await _dio.get(
+        '/forecast.json',
+        queryParameters: {
+          'key': _apiKey,
+          'q': query,
+          'days': 7,
+          'aqi': 'no',
+          'alerts': 'no',
+          'lang': 'mn',
+        },
       );
-    } on DioException catch (e) {
-      throw _handleError(e);
+
+      final data = response.data as Map<String, dynamic>;
+
+      return WeatherData.fromJson(
+        data['current'] as Map<String, dynamic>,
+        data['location'] as Map<String, dynamic>,
+        data['forecast']['forecastday'] as List<dynamic>,
+      );
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      final data = error.response?.data;
+
+      if (statusCode == 401) {
+        throw 'API түлхүүр буруу эсвэл идэвхгүй байна';
+      }
+
+      if (data is Map<String, dynamic> &&
+          data['error'] is Map<String, dynamic> &&
+          data['error']['message'] != null) {
+        throw data['error']['message'].toString();
+      }
+
+      throw 'Цаг агаарын мэдээлэл авахад алдаа гарлаа';
+    } catch (_) {
+      throw 'Цаг агаарын мэдээлэл боловсруулахад алдаа гарлаа';
     }
   }
 
   Future<List<City>> searchCities(String query) async {
-    if (query.trim().length < 2) return [];
+    final trimmedQuery = query.trim();
+
+    if (trimmedQuery.length < 2) {
+      return [];
+    }
+
     try {
-      final response = await _dio.get('/search.json', queryParameters: {
-        'key': _apiKey,
-        'q': query.trim(),
-      });
-      return (response.data as List).map((c) => City.fromJson(c)).toList();
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+      final response = await _dio.get(
+        '/search.json',
+        queryParameters: {
+          'key': _apiKey,
+          'q': trimmedQuery,
+        },
+      );
 
-  String _handleError(DioException e) {
-    final statusCode = e.response?.statusCode;
-    String? errorMessage;
-    final responseData = e.response?.data;
+      final data = response.data as List<dynamic>;
 
-    if (responseData is Map) {
-      final error = responseData['error'];
-      if (error is Map && error['message'] != null) {
-        errorMessage = error['message'].toString();
-      }
+      return data
+          .map((item) => City.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (_) {
+      return [];
+    } catch (_) {
+      return [];
     }
-
-    if (statusCode == 401 || statusCode == 403) {
-      return 'API түлхүүр буруу эсвэл идэвхгүй байна';
-    }
-    if (statusCode == 400) {
-      return errorMessage ?? 'Хот олдсонгүй';
-    }
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.sendTimeout) {
-      return 'Холболт удаан байна';
-    }
-    if (e.type == DioExceptionType.connectionError) {
-      return 'Интернет холболтоо шалгана уу';
-    }
-    return errorMessage ?? 'Алдаа гарлаа: ${e.message}';
   }
 }

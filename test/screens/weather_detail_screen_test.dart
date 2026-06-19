@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:weather_app/models/weather_model.dart';
 import 'package:weather_app/providers/weather_providers.dart';
 import 'package:weather_app/screens/weather_detail_screen.dart';
-import 'package:weather_app/models/weather_model.dart';
+
 import '../helpers/weather_test_data.dart';
 
 void main() {

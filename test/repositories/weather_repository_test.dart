@@ -3,56 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:weather_app/services/weather_service.dart';
 
+import '../helpers/weather_test_data.dart';
+
 void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
   late WeatherService weatherService;
 
   const apiKey = 'cb288425569c4c8db0164139261106';
-
-  final weatherResponse = {
-    'location': {
-      'name': 'Ulaanbaatar',
-      'country': 'Mongolia',
-      'lat': 47.92,
-      'lon': 106.92,
-    },
-    'current': {
-      'temp_c': 21.5,
-      'feelslike_c': 20.8,
-      'humidity': 45,
-      'wind_kph': 12.3,
-      'condition': {
-        'text': 'Sunny',
-        'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-      },
-      'uv': 4.0,
-      'vis_km': 10.0,
-      'pressure_mb': 1012.0,
-    },
-    'forecast': {
-      'forecastday': [
-        {
-          'date': '2026-06-15',
-          'day': {
-            'maxtemp_c': 24.0,
-            'mintemp_c': 12.0,
-            'condition': {
-              'text': 'Sunny',
-              'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-            },
-            'daily_chance_of_rain': 10,
-            'avghumidity': 50,
-            'maxwind_kph': 15.0,
-            'uv': 5.0,
-            'avgvis_km': 10.0,
-            'totalprecip_mm': 0.0,
-            'daily_chance_of_snow': 0,
-          },
-        },
-      ],
-    },
-  };
 
   setUp(() {
     dio = Dio(
@@ -69,7 +27,7 @@ void main() {
     test('returns WeatherData when HTTP request succeeds', () async {
       dioAdapter.onGet(
         '/forecast.json',
-            (server) => server.reply(200, weatherResponse),
+        (server) => server.reply(200, buildWeatherApiResponse()),
         queryParameters: {
           'key': apiKey,
           'q': 'Ulaanbaatar',
@@ -92,7 +50,7 @@ void main() {
     test('throws API error message when city is not found', () async {
       dioAdapter.onGet(
         '/forecast.json',
-            (server) => server.reply(
+        (server) => server.reply(
           400,
           {
             'error': {
@@ -111,7 +69,7 @@ void main() {
       );
 
       expect(
-            () => weatherService.getWeather('UnknownCity'),
+        () => weatherService.getWeather('UnknownCity'),
         throwsA(equals('No matching location found.')),
       );
     });
@@ -119,7 +77,7 @@ void main() {
     test('throws API key error message for unauthorized response', () async {
       dioAdapter.onGet(
         '/forecast.json',
-            (server) => server.reply(
+        (server) => server.reply(
           401,
           {
             'error': {
@@ -138,7 +96,7 @@ void main() {
       );
 
       expect(
-            () => weatherService.getWeather('Ulaanbaatar'),
+        () => weatherService.getWeather('Ulaanbaatar'),
         throwsA(equals('API түлхүүр буруу эсвэл идэвхгүй байна')),
       );
     });
@@ -154,15 +112,10 @@ void main() {
     test('returns cities when HTTP request succeeds', () async {
       dioAdapter.onGet(
         '/search.json',
-            (server) => server.reply(
+        (server) => server.reply(
           200,
           [
-            {
-              'name': 'Ulaanbaatar',
-              'country': 'Mongolia',
-              'lat': 47.92,
-              'lon': 106.92,
-            },
+            buildLocationJson(),
           ],
         ),
         queryParameters: {
@@ -176,6 +129,28 @@ void main() {
       expect(result, hasLength(1));
       expect(result.first.name, 'Ulaanbaatar');
       expect(result.first.country, 'Mongolia');
+      expect(result.first.displayName, 'Ulaanbaatar, Mongolia');
+    });
+
+    test('trims search query before request', () async {
+      dioAdapter.onGet(
+        '/search.json',
+        (server) => server.reply(
+          200,
+          [
+            buildLocationJson(),
+          ],
+        ),
+        queryParameters: {
+          'key': apiKey,
+          'q': 'Ulaanbaatar',
+        },
+      );
+
+      final result = await weatherService.searchCities('  Ulaanbaatar  ');
+
+      expect(result, hasLength(1));
+      expect(result.first.name, 'Ulaanbaatar');
     });
   });
 }

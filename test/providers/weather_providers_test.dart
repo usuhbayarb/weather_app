@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:weather_app/models/weather_model.dart';
 import 'package:weather_app/providers/weather_providers.dart';
 import 'package:weather_app/services/weather_service.dart';
+
+import '../helpers/weather_test_data.dart';
 
 class MockWeatherService extends Mock implements WeatherService {}
 
@@ -12,6 +13,7 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
+
   ProviderContainer createContainer({WeatherService? weatherService}) {
     final container = ProviderContainer(
       overrides: [
@@ -22,69 +24,6 @@ void main() {
 
     addTearDown(container.dispose);
     return container;
-  }
-
-  City buildCity({
-    String name = 'Ulaanbaatar',
-    String country = 'Mongolia',
-    double lat = 47.92,
-    double lon = 106.92,
-  }) {
-    return City(
-      name: name,
-      country: country,
-      lat: lat,
-      lon: lon,
-    );
-  }
-
-  WeatherData buildWeatherData({
-    String cityName = 'Ulaanbaatar',
-    String country = 'Mongolia',
-  }) {
-    final current = {
-      'temp_c': 21.5,
-      'feelslike_c': 20.8,
-      'humidity': 45,
-      'wind_kph': 12.3,
-      'condition': {
-        'text': 'Sunny',
-        'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-      },
-      'uv': 4.0,
-      'vis_km': 10.0,
-      'pressure_mb': 1012.0,
-    };
-
-    final location = {
-      'name': cityName,
-      'country': country,
-      'lat': 47.92,
-      'lon': 106.92,
-    };
-
-    final forecast = [
-      {
-        'date': '2026-06-15',
-        'day': {
-          'maxtemp_c': 24.0,
-          'mintemp_c': 12.0,
-          'condition': {
-            'text': 'Sunny',
-            'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-          },
-          'daily_chance_of_rain': 10,
-          'avghumidity': 50,
-          'maxwind_kph': 15.0,
-          'uv': 5.0,
-          'avgvis_km': 10.0,
-          'totalprecip_mm': 0.0,
-          'daily_chance_of_snow': 0,
-        },
-      },
-    ];
-
-    return WeatherData.fromJson(current, location, forecast);
   }
 
   group('countriesProvider', () {
@@ -141,11 +80,11 @@ void main() {
 
     test('returns cities from weather service when query is valid', () async {
       final service = MockWeatherService();
-      final city = buildCity();
+      final city = buildTestCity();
       final container = createContainer(weatherService: service);
 
       when(() => service.searchCities('Ulaanbaatar')).thenAnswer(
-            (_) async => [city],
+        (_) async => [city],
       );
 
       container.read(searchQueryProvider.notifier).state = ' Ulaanbaatar ';
@@ -163,11 +102,11 @@ void main() {
   group('weatherProvider', () {
     test('returns weather data when service succeeds', () async {
       final service = MockWeatherService();
-      final weather = buildWeatherData();
+      final weather = buildTestWeatherData();
       final container = createContainer(weatherService: service);
 
       when(() => service.getWeather('Ulaanbaatar')).thenAnswer(
-            (_) async => weather,
+        (_) async => weather,
       );
 
       final result = await container.read(
@@ -205,9 +144,10 @@ void main() {
       expect(favorites, isEmpty);
     });
 
-    test('toggles city as favorite and removes it when toggled again', () async {
+    test('toggles city as favorite and removes it when toggled again',
+        () async {
       final container = createContainer();
-      final city = buildCity();
+      final city = buildTestCity();
 
       await container.read(favoritesProvider.future);
 
@@ -229,7 +169,7 @@ void main() {
 
     test('checks whether city is favorite', () async {
       final container = createContainer();
-      final city = buildCity();
+      final city = buildTestCity();
 
       await container.read(favoritesProvider.future);
 
@@ -259,8 +199,8 @@ void main() {
     test('records recently viewed cities with latest city first', () async {
       final container = createContainer();
 
-      final ulaanbaatar = buildCity();
-      final tokyo = buildCity(
+      final ulaanbaatar = buildTestCity();
+      final tokyo = buildTestCity(
         name: 'Tokyo',
         country: 'Japan',
         lat: 35.68,
@@ -287,13 +227,13 @@ void main() {
 
       for (var i = 0; i < 12; i++) {
         await container.read(mostViewedProvider.notifier).recordView(
-          buildCity(
-            name: 'City $i',
-            country: 'Country',
-            lat: i.toDouble(),
-            lon: i.toDouble(),
-          ),
-        );
+              buildTestCity(
+                name: 'City $i',
+                country: 'Country',
+                lat: i.toDouble(),
+                lon: i.toDouble(),
+              ),
+            );
       }
 
       final mostViewed = container.read(mostViewedProvider).value;

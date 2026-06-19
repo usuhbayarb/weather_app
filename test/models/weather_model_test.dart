@@ -1,52 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:weather_app/models/weather_model.dart';
 
+import '../helpers/weather_test_data.dart';
+
 void main() {
   group('WeatherData.fromJson', () {
     test('parses weather data from API json', () {
-      final current = {
-        'temp_c': 21.5,
-        'feelslike_c': 20.8,
-        'humidity': 45,
-        'wind_kph': 12.3,
-        'condition': {
-          'text': 'Sunny',
-          'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-        },
-        'uv': 4.0,
-        'vis_km': 10.0,
-        'pressure_mb': 1012.0,
-      };
-
-      final location = {
-        'name': 'Ulaanbaatar',
-        'country': 'Mongolia',
-        'lat': 47.92,
-        'lon': 106.92,
-      };
-
-      final forecast = [
-        {
-          'date': '2026-06-15',
-          'day': {
-            'maxtemp_c': 24.0,
-            'mintemp_c': 12.0,
-            'condition': {
-              'text': 'Sunny',
-              'icon': '//cdn.weatherapi.com/weather/64x64/day/113.png',
-            },
-            'daily_chance_of_rain': 10,
-            'avghumidity': 50,
-            'maxwind_kph': 15.0,
-            'uv': 5.0,
-            'avgvis_km': 10.0,
-            'totalprecip_mm': 0.0,
-            'daily_chance_of_snow': 0,
-          },
-        },
-      ];
-
-      final weather = WeatherData.fromJson(current, location, forecast);
+      final weather = WeatherData.fromJson(
+        buildCurrentWeatherJson(),
+        buildLocationJson(),
+        buildForecastJson(),
+      );
 
       expect(weather.cityName, 'Ulaanbaatar');
       expect(weather.country, 'Mongolia');
@@ -67,6 +31,33 @@ void main() {
       expect(weather.daily, hasLength(1));
       expect(weather.daily.first.maxTemp, 24.0);
       expect(weather.daily.first.minTemp, 12.0);
+    });
+
+    test('parses weather data with custom values', () {
+      final weather = WeatherData.fromJson(
+        buildCurrentWeatherJson(
+          tempC: -5.2,
+          feelsLikeC: -8.0,
+          humidity: 70,
+          conditionText: 'Snow',
+        ),
+        buildLocationJson(
+          name: 'Tokyo',
+          country: 'Japan',
+          lat: 35.68,
+          lon: 139.69,
+        ),
+        buildForecastJson(
+          conditionText: 'Snow',
+        ),
+      );
+
+      expect(weather.cityName, 'Tokyo');
+      expect(weather.country, 'Japan');
+      expect(weather.tempC, -5.2);
+      expect(weather.feelsLike, -8.0);
+      expect(weather.humidity, 70);
+      expect(weather.description, 'Snow');
     });
   });
 
