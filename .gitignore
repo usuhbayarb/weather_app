@@ -13,3 +13,4 @@ ios/Pods/
 ios/Podfile.lock
 
 .DS_Store
+ios/Flutter/ephemeral/
