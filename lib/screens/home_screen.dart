@@ -1,13 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/weather_providers.dart';
+
 import '../theme/app_theme.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/country_section.dart';
 import '../widgets/favorites_section.dart';
 import '../widgets/most_viewed_section.dart';
-import 'weather_detail_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -38,7 +36,8 @@ class HomeScreen extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Дэлхийн аль ч хотын цаг агаар',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 14),
                       ),
                       const SizedBox(height: 20),
                       const SearchBarWidget(),
