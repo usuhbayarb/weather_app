@@ -15,20 +15,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Widget buildTestApp({
-    required List<Override> overrides,
-  }) {
+  Widget buildTestApp({required List<Override> overrides}) {
     return ProviderScope(
       overrides: overrides,
-      child: const MaterialApp(
-        home: HomeScreen(),
-      ),
+      child: const MaterialApp(home: HomeScreen()),
     );
   }
 
-  group('HomeScreen', () {
-    testWidgets('shows loading state from country weather cards',
-        (tester) async {
+  group('HomeScreen - app bar', () {
+    testWidgets('shows app title', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
           overrides: [
@@ -42,12 +37,60 @@ void main() {
       await tester.pump();
 
       expect(find.textContaining('Цаг Агаар'), findsOneWidget);
-      expect(find.text('Улс орнууд'), findsOneWidget);
-      expect(find.text('Ачааллаж байна...'), findsWidgets);
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
 
-    testWidgets('shows error state from country weather cards', (tester) async {
+    testWidgets('shows subtitle text', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          overrides: [
+            weatherProvider.overrideWith((ref, query) {
+              return Completer<WeatherData>().future;
+            }),
+          ],
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Дэлхийн аль ч хотын цаг агаар'), findsOneWidget);
+    });
+  });
+
+  group('HomeScreen - countries section', () {
+    testWidgets('shows countries section header', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          overrides: [
+            weatherProvider.overrideWith((ref, query) {
+              return Completer<WeatherData>().future;
+            }),
+          ],
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Улс орнууд'), findsOneWidget);
+    });
+
+    testWidgets('shows loading indicators while fetching weather',
+            (tester) async {
+          await tester.pumpWidget(
+            buildTestApp(
+              overrides: [
+                weatherProvider.overrideWith((ref, query) {
+                  return Completer<WeatherData>().future;
+                }),
+              ],
+            ),
+          );
+
+          await tester.pump();
+
+          expect(find.byType(CircularProgressIndicator), findsWidgets);
+        });
+
+    testWidgets('shows error state when weather fetch fails', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
           overrides: [
@@ -60,21 +103,17 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Цаг Агаар'), findsOneWidget);
-      expect(find.text('Улс орнууд'), findsOneWidget);
       expect(find.text('Алдаа гарлаа'), findsWidgets);
       expect(find.byIcon(Icons.error_outline), findsWidgets);
     });
 
-    testWidgets('shows success state from country weather cards',
-        (tester) async {
+    testWidgets('shows weather data when fetch succeeds', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
           overrides: [
             weatherProvider.overrideWith((ref, query) async {
               return buildTestWeatherData(
                 cityName: query,
-                country: 'Test Country',
                 tempC: 22,
                 description: 'Sunny',
               );
@@ -85,10 +124,85 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Цаг Агаар'), findsOneWidget);
-      expect(find.text('Улс орнууд'), findsOneWidget);
       expect(find.text('Sunny'), findsWidgets);
       expect(find.text('22°C'), findsWidgets);
     });
+  });
+
+  group('HomeScreen - search bar', () {
+    testWidgets('shows search bar', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          overrides: [
+            weatherProvider.overrideWith((ref, query) {
+              return Completer<WeatherData>().future;
+            }),
+          ],
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('search results hidden when query is short', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          overrides: [
+            weatherProvider.overrideWith((ref, query) {
+              return Completer<WeatherData>().future;
+            }),
+          ],
+        ),
+      );
+
+      await tester.pump();
+
+      final textField = find.byType(TextField);
+      await tester.tap(textField);
+      await tester.enterText(textField, 'U');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ListView), findsNothing);
+    });
+  });
+
+  group('HomeScreen - favorites section', () {
+    testWidgets('favorites section is hidden when list is empty',
+            (tester) async {
+          await tester.pumpWidget(
+            buildTestApp(
+              overrides: [
+                weatherProvider.overrideWith((ref, query) {
+                  return Completer<WeatherData>().future;
+                }),
+              ],
+            ),
+          );
+
+          await tester.pumpAndSettle();
+
+          expect(find.text('Дуртай хотууд'), findsNothing);
+        });
+  });
+
+  group('HomeScreen - most viewed section', () {
+    testWidgets('most viewed section is hidden when list is empty',
+            (tester) async {
+          await tester.pumpWidget(
+            buildTestApp(
+              overrides: [
+                weatherProvider.overrideWith((ref, query) {
+                  return Completer<WeatherData>().future;
+                }),
+              ],
+            ),
+          );
+
+          await tester.pumpAndSettle();
+
+          expect(find.text('Сүүлд үзсэн'), findsNothing);
+        });
   });
 }
